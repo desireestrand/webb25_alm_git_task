@@ -53,12 +53,23 @@ const getProductById = async (req, res) => {
 
 const createProduct = async (req, res) => {
   try {
-    const { name, price, description } = req.body
+    const { name, price, category } = req.body
 
     if (!name || !price) {
       return res.status(400).json({ message: 'Name and price are required' })
     }
+
+    if (category) {
+      if (!mongoose.Types.ObjectId.isValid(category)) {
+        return res.status(400).json({ message: 'Invalid category ID' })
+      }
+      const exists = await Category.findById(category)
+      if (!exists) {
+        return res.status(400).json({ message: 'Category does not exist' })
+      }
+    }
     const newProduct = await Product.create(req.body)
+    await newProduct.populate('category', 'name isActive')
     res.status(201).json(newProduct)
   } catch (error) {
     if (error.name === 'ValidationError') {
@@ -74,10 +85,21 @@ const updateProduct = async (req, res) => {
       return res.status(400).json({ message: 'Invalid product ID' })
     }
 
+    const { category } = req.body
+    if (category) {
+      if (!mongoose.Types.ObjectId.isValid(category)) {
+        return res.status(400).json({ message: 'Invalid category ID' })
+      }
+      const exists = await Category.findById(category)
+      if (!exists) {
+        return res.status(400).json({ message: 'Category does not exist' })
+      }
+    }
+
     const updatedProduct = await Product.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true
-    })
+    }).populate('category', 'name isActive')
 
     if (!updatedProduct) {
       return res.status(404).json({ message: 'Product not found' })
