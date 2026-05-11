@@ -1,15 +1,19 @@
+const mongoose = require('mongoose')
 const Product = require('../src/models/Product')
 
 describe('Product model validation', () => {
-  it('creates a valid product with name and price', () => {
+  it('creates a valid product with category', () => {
     const product = new Product({
       name: 'Keyboard',
       price: 499,
-      description: 'Mechanical keyboard'
+      category: new mongoose.Types.ObjectId()
     })
-    const error = product.validateSync()
+    expect(product.validateSync()).toBeUndefined()
+  })
 
-    expect(error).toBeUndefined()
+  it('creates a valid product without category', () => {
+    const product = new Product({ name: 'Pen', price: 10 })
+    expect(product.validateSync()).toBeUndefined()
   })
 
   it('fails validation when name is missing', () => {
@@ -28,18 +32,11 @@ describe('Product model validation', () => {
     expect(error.errors.price.message).toBe('Path `price` (-10) is less than minimum allowed value (0).')
   })
 
-  it('creates a valid product with name, price and category', () => {
-    const product = new Product({ name: 'Keyboard', price: 499, description: 'Mechanical keyboard', category: 'electronics' })
-    const error = product.validateSync()
-
-    expect(error).toBeUndefined()
-  })
-
-  it('fails validation when category is invalid', () => {
-    const product = new Product({ name: 'Banana', price: 5, description: 'Green banana', category: 'food' })
+  it('fails validation when category is not a valid ObjectId', () => {
+    const product = new Product({ name: 'Banana', price: 5, category: 'not-an-id' })
     const error = product.validateSync()
 
     expect(error).toBeDefined()
-    expect(error.errors.category.message).toBe('food is not a supported category')
+    expect(error.errors.category).toBeDefined()
   })
 })
