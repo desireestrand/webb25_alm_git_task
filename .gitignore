@@ -4,3 +4,7 @@ node_modules/
 coverage/
 .DS_Store
 npm-debug.log*
+
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
