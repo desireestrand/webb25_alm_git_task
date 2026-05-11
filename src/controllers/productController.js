@@ -1,6 +1,7 @@
 const mongoose = require('mongoose')
 const { getFullTextSearch } = require('../utils/fullTextSearch')
 const Product = require('../models/Product')
+const Category = require('../models/Category')
 
 const getProducts = async (req, res) => {
   try {
@@ -25,7 +26,7 @@ const getProducts = async (req, res) => {
     const skip = (page - 1) * limit
 
     const total = await Product.countDocuments()
-    const products = await Product.find(filter).skip(skip).limit(limit).sort('-createdAt')
+    const products = await Product.find(filter).populate('category', 'name isActive').skip(skip).limit(limit).sort('-createdAt')
     res.status(200).json(products)
   } catch (error) {
     res.status(500).json({ message: 'Could not fetch products' })
@@ -38,7 +39,7 @@ const getProductById = async (req, res) => {
       return res.status(400).json({ message: 'Invalid product ID' })
     }
 
-    const product = await Product.findById(req.params.id)
+    const product = await Product.findById(req.params.id).populate('category', 'name isActive')
 
     if (!product) {
       return res.status(404).json({ message: 'Product not found' })
