@@ -88,14 +88,14 @@ describe('Product API', () => {
     expect(response.body.price).toBe(899)
   })
 
-  it('should return 400 when update fails validation', async () => {
+  it('should return 400 when update has invalid category id', async () => {
     const response = await request(app).put(`/products/${productId}`).send({
       name: 'Keyboard',
       price: 10,
       category: 'food'
     })
     expect(response.status).toBe(400)
-    expect(response.body.message).toBe('Invalid product data')
+    expect(response.body.message).toBe('Invalid category ID')
   })
 
   it('should return 404 when updating a non-existent product', async () => {
