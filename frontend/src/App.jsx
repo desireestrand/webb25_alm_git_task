@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { getApiBase } from './api/client.js'
 import { createProduct, deleteProduct, fetchProducts } from './api/products.js'
 import { fetchCategories } from './api/categories.js'
+import CategoriesPanel from './components/CategoriesPanel.jsx'
 import './App.css'
 
 function App() {
@@ -179,6 +180,7 @@ function App() {
               Description
               <input value={formDescription} onChange={(ev) => setFormDescription(ev.target.value)} />
             </label>
+
             <label>
               Category
               <select value={formCategory} onChange={(ev) => setFormCategory(ev.target.value)}>
@@ -210,6 +212,21 @@ function App() {
             </div>
           </form>
         </section>
+
+        {error ? (
+          <div className='card error' role='alert'>
+            {error}
+          </div>
+        ) : null}
+
+        {categoriesError ? (
+          <div className='card error' role='alert'>
+            Categories: {categoriesError}
+          </div>
+        ) : null}
+
+        {/* ⬇️ Lägg till denna */}
+        <CategoriesPanel categories={categories} onChanged={loadCategories} />
 
         <section className='card'>
           <h2>Catalog</h2>
