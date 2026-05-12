@@ -1,6 +1,7 @@
 const mongoose = require('mongoose')
 const { getFullTextSearch } = require('../utils/fullTextSearch')
 const Product = require('../models/Product')
+const Category = require('../models/Category')
 
 const getProducts = async (req, res) => {
   try {
@@ -25,7 +26,7 @@ const getProducts = async (req, res) => {
     const skip = (page - 1) * limit
 
     const total = await Product.countDocuments()
-    const products = await Product.find(filter).skip(skip).limit(limit).sort('-createdAt')
+    const products = await Product.find(filter).populate('category', 'name isActive').skip(skip).limit(limit).sort('-createdAt')
     res.status(200).json(products)
   } catch (error) {
     res.status(500).json({ message: 'Could not fetch products' })
@@ -38,7 +39,7 @@ const getProductById = async (req, res) => {
       return res.status(400).json({ message: 'Invalid product ID' })
     }
 
-    const product = await Product.findById(req.params.id)
+    const product = await Product.findById(req.params.id).populate('category', 'name isActive')
 
     if (!product) {
       return res.status(404).json({ message: 'Product not found' })
@@ -52,12 +53,23 @@ const getProductById = async (req, res) => {
 
 const createProduct = async (req, res) => {
   try {
-    const { name, price, description } = req.body
+    const { name, price, category } = req.body
 
     if (!name || !price) {
       return res.status(400).json({ message: 'Name and price are required' })
     }
+
+    if (category) {
+      if (!mongoose.Types.ObjectId.isValid(category)) {
+        return res.status(400).json({ message: 'Invalid category ID' })
+      }
+      const exists = await Category.findById(category)
+      if (!exists) {
+        return res.status(400).json({ message: 'Category does not exist' })
+      }
+    }
     const newProduct = await Product.create(req.body)
+    await newProduct.populate('category', 'name isActive')
     res.status(201).json(newProduct)
   } catch (error) {
     if (error.name === 'ValidationError') {
@@ -73,10 +85,21 @@ const updateProduct = async (req, res) => {
       return res.status(400).json({ message: 'Invalid product ID' })
     }
 
+    const { category } = req.body
+    if (category) {
+      if (!mongoose.Types.ObjectId.isValid(category)) {
+        return res.status(400).json({ message: 'Invalid category ID' })
+      }
+      const exists = await Category.findById(category)
+      if (!exists) {
+        return res.status(400).json({ message: 'Category does not exist' })
+      }
+    }
+
     const updatedProduct = await Product.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true
-    })
+    }).populate('category', 'name isActive')
 
     if (!updatedProduct) {
       return res.status(404).json({ message: 'Product not found' })

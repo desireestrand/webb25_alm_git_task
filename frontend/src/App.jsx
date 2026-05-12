@@ -1,14 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
 import { getApiBase } from './api/client.js'
 import { createProduct, deleteProduct, fetchProducts } from './api/products.js'
+import { fetchCategories } from './api/categories.js'
+import CategoriesPanel from './components/CategoriesPanel.jsx'
 import './App.css'
-
-const CATEGORIES = [
-  { value: '', label: 'No category' },
-  { value: 'electronics', label: 'Electronics' },
-  { value: 'clothing', label: 'Clothing' },
-  { value: 'home', label: 'Home' }
-]
 
 function App() {
   const hasApi = Boolean(getApiBase())
@@ -25,6 +20,9 @@ function App() {
   const [formDescription, setFormDescription] = useState('')
   const [formCategory, setFormCategory] = useState('')
   const [saving, setSaving] = useState(false)
+
+  const [categories, setCategories] = useState([])
+  const [categoriesError, setCategoriesError] = useState(null)
 
   const load = useCallback(
     async (signal) => {
@@ -109,6 +107,31 @@ function App() {
     }
   }
 
+  const loadCategories = useCallback(
+    async (signal) => {
+      if (!hasApi) return
+      setCategoriesError(null)
+
+      try {
+        const opts = signal ? { signal } : []
+        const list = await fetchCategories(opts)
+        setCategories(list)
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') return
+        setCategoriesError(e instanceof Error ? e.message : 'Could not load categories')
+      }
+    },
+    [hasApi]
+  )
+
+  useEffect(() => {
+    if (!hasApi) return
+    const ac = new AbortController()
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- setState happens after await, not sync
+    void loadCategories(ac.signal)
+    return () => ac.abort()
+  }, [hasApi, loadCategories])
+
   if (!hasApi) {
     return (
       <div className='app shell'>
@@ -157,14 +180,29 @@ function App() {
               Description
               <input value={formDescription} onChange={(ev) => setFormDescription(ev.target.value)} />
             </label>
+
             <label>
               Category
               <select value={formCategory} onChange={(ev) => setFormCategory(ev.target.value)}>
-                {CATEGORIES.map((c) => (
-                  <option key={c.value || 'none'} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
+                <option value=''>No category</option>
+                {categories
+                  .filter((c) => c.isActive)
+                  .map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.name}
+                    </option>
+                  ))}
+                {error ? (
+                  <div className='card error' role='alert'>
+                    {error}
+                  </div>
+                ) : null}
+
+                {categoriesError ? (
+                  <div className='card error' role='alert'>
+                    Categories: {categoriesError}
+                  </div>
+                ) : null}
               </select>
             </label>
             <div className='form-actions'>
@@ -174,6 +212,21 @@ function App() {
             </div>
           </form>
         </section>
+
+        {error ? (
+          <div className='card error' role='alert'>
+            {error}
+          </div>
+        ) : null}
+
+        {categoriesError ? (
+          <div className='card error' role='alert'>
+            Categories: {categoriesError}
+          </div>
+        ) : null}
+
+        {/* ⬇️ Lägg till denna */}
+        <CategoriesPanel categories={categories} onChanged={loadCategories} />
 
         <section className='card'>
           <h2>Catalog</h2>
@@ -195,7 +248,7 @@ function App() {
                 <div>
                   <strong>{p.name}</strong>
                   <span className='muted'> · {p.price} kr</span>
-                  {p.category ? <span className='tag'>{p.category}</span> : null}
+                  {p.category && typeof p.category === 'object' ? <span className='tag'>{p.category.name}</span> : null}
                   {p.description ? <p className='desc'>{p.description}</p> : null}
                 </div>
                 <button type='button' className='danger' onClick={() => onDelete(p._id)}>
