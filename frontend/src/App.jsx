@@ -106,16 +106,30 @@ function App() {
     }
   }
 
+  const loadCategories = useCallback(
+    async (signal) => {
+      if (!hasApi) return
+      setCategoriesError(null)
+
+      try {
+        const opts = signal ? { signal } : []
+        const list = await fetchCategories(opts)
+        setCategories(list)
+      } catch (e) {
+        if (e instanceof DOMException && e.name === 'AbortError') return
+        setCategoriesError(e instanceof Error ? e.message : 'Could not load categories')
+      }
+    },
+    [hasApi]
+  )
+
   useEffect(() => {
     if (!hasApi) return
     const ac = new AbortController()
-    fetchCategories({ signal: ac.signal })
-      .then(setCategories)
-      .catch((e) => {
-        if (e instanceof DOMException && e.name === 'AbortError') return
-      })
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- setState happens after await, not sync
+    void loadCategories(ac.signal)
     return () => ac.abort()
-  }, [hasApi])
+  }, [hasApi, loadCategories])
 
   if (!hasApi) {
     return (
